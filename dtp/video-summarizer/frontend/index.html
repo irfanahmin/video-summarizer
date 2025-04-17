@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Video Summarizer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Video Summarizer</h1>
+    <form id="upload-form">
+      <input type="file" id="video-input" accept="video/*" required>
+      <button type="submit">Upload & Summarize</button>
+    </form>
+
+    <div id="progress" class="hidden">Processing... please wait.</div>
+
+    <div id="results" class="hidden">
+      <h2>Transcript</h2>
+      <pre id="transcript"></pre>
+
+      <h2>Abstractive Summary</h2>
+      <p id="summary-abs"></p>
+
+      <h2>Extractive Summary</h2>
+      <p id="summary-ext"></p>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
