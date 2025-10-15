@@ -18,9 +18,9 @@ from video_pipeline import (
     extract_audio,
     transcribe_audio,
     save_transcript,
-    abstractive_summary,
+    abstractive_summary, # Still imported, but won't be called
     extractive_summary,
-    generate_structured_notes
+    generate_structured_notes # Still imported, but won't be called
 )
 
 from yt_dlp import YoutubeDL
@@ -135,14 +135,18 @@ async def process_media(media_path: str):
         print("Transcript saved.")
 
         # 4) Summaries
-        summary_abs = abstractive_summary(transcript)
+        # ⚠️ TEMPORARILY DISABLED: Commenting out to avoid loading the memory-heavy BART model.
+        # summary_abs = abstractive_summary(transcript)
+        summary_abs = "Abstractive summary temporarily disabled to meet 512MiB memory constraints."
         print("Abstractive Summary:", summary_abs)
 
         summary_ext = extractive_summary(transcript)
         print("Extractive Summary:", summary_ext)
 
         # 5) Structured notes
-        structured_notes = generate_structured_notes(summary_abs)
+        # ⚠️ TEMPORARILY DISABLED: This depends on the abstractive summary, so it's also disabled.
+        # structured_notes = generate_structured_notes(summary_abs)
+        structured_notes = "Structured notes temporarily disabled to meet 512MiB memory constraints."
         print("Structured Notes Generated:", structured_notes)
 
         # 6) Cleanup
