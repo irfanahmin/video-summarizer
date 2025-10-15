@@ -1,5 +1,5 @@
 
-transformers
+
 sentencepiece
 scikit-learn
 
@@ -21,7 +21,7 @@ openai-whisper
 
 # --- Utilities ---
 pydantic
-
+python-multipart
 fastapi
 uvicorn
 yt-dlp
@@ -31,3 +31,4 @@ nltk
 sumy
 ffmpeg-python
 whisper
+
