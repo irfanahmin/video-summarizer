@@ -53,8 +53,8 @@ def extract_video_id(url: str) -> str:
     """
     pattern = re.compile(
         r"""(?:v=|\/shorts\/|youtu\.be\/)
-            ([0-9A-Za-z_-]{11})
-            (?=$|[?&])""",
+             ([0-9A-Za-z_-]{11})
+             (?=$|[?&])""",
         re.VERBOSE
     )
     match = pattern.search(url)
@@ -110,7 +110,6 @@ async def process_youtube_url(url: str = Form(...)):
         raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
 
-
 # ─── Core Media Processing ──────────────────────────────────────────────────
 
 async def process_media(media_path: str):
@@ -133,8 +132,7 @@ async def process_media(media_path: str):
         print("Transcript saved.")
 
         # 4) Summaries
-        # ⚠️ TEMPORARILY DISABLED: Commenting out to avoid loading the memory-heavy BART model.
-        # summary_abs = abstractive_summary(transcript)
+        # Abstractive summary is DISABLED for memory saving.
         summary_abs = "Abstractive summary temporarily disabled to meet 512MiB memory constraints."
         print("Abstractive Summary:", summary_abs)
 
@@ -142,8 +140,7 @@ async def process_media(media_path: str):
         print("Extractive Summary:", summary_ext)
 
         # 5) Structured notes
-        # ⚠️ TEMPORARILY DISABLED: This depends on the abstractive summary, so it's also disabled.
-        # structured_notes = generate_structured_notes(summary_abs)
+        # Structured notes are DISABLED as they rely on abstractive summary.
         structured_notes = "Structured notes temporarily disabled to meet 512MiB memory constraints."
         print("Structured Notes Generated:", structured_notes)
 
@@ -183,4 +180,3 @@ async def process_uploaded_video(video: UploadFile = File(...)):
         print("Error in /process-video:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error processing uploaded video: {e}")
-# uvicorn main:app --reload
