@@ -1,31 +1,74 @@
 # video_pipeline.py
 
-
 import os
 import sys
 import traceback
 import nltk
-from transformers import pipeline as hf_pipeline
+# NOTE: Removed 'from transformers import pipeline as hf_pipeline'
+# NOTE: Removed 'try/except import whisper'
+
+# Sumy dependencies (relatively light, can stay)
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
-# Ensure we're using the correct whisper package
-try:
-    import whisper
-except ImportError:
-    import whisper
-
-# Import ffmpeg with error handling
+# Import ffmpeg with error handling (relatively light, can stay)
 try:
     import ffmpeg
 except ImportError:
     print("Error: ffmpeg-python package not found. Installing...")
+    # NOTE: This line might fail on Render unless run in a build step,
+    # but we keep it for local development compatibility.
     os.system(f"{sys.executable} -m pip install ffmpeg-python")
     import ffmpeg
 
 
-# download required NLTK models
+# --- Global Model Caching Variables ---
+# Models will be loaded into these variables on first use.
+WHISPER_MODEL = None
+SUMMARIZER_PIPELINE = None
+# --------------------------------------
+
+# paths & model IDs
+AUDIO_PATH = "audio.wav"
+ABSTRACTIVE_MODEL_ID = "facebook/bart-base"
+
+
+# --- Model Loading & Caching Functions (Lazy Loading) ---
+
+def get_whisper_model():
+    """Loads and caches the Whisper model on the first call."""
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None:
+        try:
+            # ⚠️ Import heavy library inside the function to prevent global startup load
+            import whisper 
+            print("--- LAZY LOADING: Loading Whisper model (tiny) ---")
+            # Using CPU to keep memory footprint as low as possible
+            WHISPER_MODEL = whisper.load_model("tiny", device="cpu")
+            print("--- LAZY LOADING: Whisper model loaded successfully ---")
+        except Exception as e:
+            raise Exception(f"Failed to load Whisper model: {str(e)}")
+    return WHISPER_MODEL
+
+def get_summarizer_pipeline():
+    """Loads and caches the Hugging Face summarizer pipeline on the first call."""
+    global SUMMARIZER_PIPELINE
+    if SUMMARIZER_PIPELINE is None:
+        try:
+            # ⚠️ Import heavy library inside the function to prevent global startup load
+            from transformers import pipeline as hf_pipeline
+            print(f"--- LAZY LOADING: Loading Summarizer pipeline ({ABSTRACTIVE_MODEL_ID}) ---")
+            SUMMARIZER_PIPELINE = hf_pipeline("summarization", model=ABSTRACTIVE_MODEL_ID)
+            print("--- LAZY LOADING: Summarizer pipeline loaded successfully ---")
+        except Exception as e:
+            raise Exception(f"Failed to load summarization model: {str(e)}")
+    return SUMMARIZER_PIPELINE
+
+# --------------------------------------------------------------------------------
+
+
+# download required NLTK models (relatively light)
 def ensure_nltk_dependencies():
     try:
         nltk.download("punkt", quiet=True)
@@ -39,10 +82,7 @@ def ensure_nltk_dependencies():
 # Ensure NLTK dependencies are available
 ensure_nltk_dependencies()
 
-# paths & model IDs
-AUDIO_PATH = "audio.wav"
-# ABSTRACTIVE_MODEL_ID = "facebook/bart-large-cnn"
-ABSTRACTIVE_MODEL_ID = "facebook/bart-base"
+
 def extract_audio(video_path: str) -> str:
     """Extract WAV at 16 kHz from video."""
     try:
@@ -87,11 +127,11 @@ def transcribe_audio(audio_path: str) -> str:
         print(f"Audio file found at: {audio_path}")
         print(f"Audio file size: {os.path.getsize(audio_path)} bytes")
             
-        # 2. Load Whisper model with explicit error handling
+        # 2. Load Whisper model using the CACHING GETTER
         try:
             print("Loading Whisper model...")
-            model = whisper.load_model("tiny", device="cpu")
-            print("Whisper model loaded successfully")
+            model = get_whisper_model() # <--- CRITICAL CHANGE: Use lazy-loaded model
+            print("Whisper model ready.")
         except Exception as model_error:
             raise Exception(f"Failed to load Whisper model: {str(model_error)}")
         
@@ -108,7 +148,7 @@ def transcribe_audio(audio_path: str) -> str:
         except Exception as transcribe_error:
             raise Exception(f"Transcription process failed: {str(transcribe_error)}")
         
-        # 4. Validate and process results
+        # 4. Validate and process results...
         if not result:
             raise Exception("Transcription failed: empty result")
             
@@ -139,8 +179,8 @@ def save_transcript(text: str, path: str = "transcript.txt"):
         f.write(text)
 
 def abstractive_summary(text: str) -> str:
-    """Return BART‑large‑cnn summary."""
-    summarizer = hf_pipeline("summarization", model=ABSTRACTIVE_MODEL_ID)
+    """Return BART summary."""
+    summarizer = get_summarizer_pipeline() # <--- CRITICAL CHANGE: Use lazy-loaded pipeline
     return summarizer(text, max_length=300, min_length=100, do_sample=False)[0]["summary_text"]
 
 def extractive_summary(text: str, num_sentences: int = 20) -> str:
@@ -152,11 +192,11 @@ def extractive_summary(text: str, num_sentences: int = 20) -> str:
 
 def generate_structured_notes(text: str) -> dict:
     """Convert summary text into structured notes with headings and points."""
+    # NLTK imports are relatively light and already guarded by try/except block.
     from nltk.tokenize import sent_tokenize
     from nltk.tokenize import word_tokenize
     from nltk import pos_tag
-    import re
-
+    
     # NLTK data should already be downloaded at this point
     
     # Split into sentences
@@ -187,11 +227,15 @@ def generate_structured_notes(text: str) -> dict:
             
         if is_heading:
             current_heading = sentence.rstrip(':')
-            structured_notes['headings'].append(current_heading)
-            structured_notes['points'][current_heading] = []
+            if current_heading not in structured_notes['headings']:
+                 structured_notes['headings'].append(current_heading)
+                 structured_notes['points'][current_heading] = []
         else:
             # Clean up the sentence
             clean_sentence = sentence.strip()
+            # Ensure current heading exists before appending (safety check)
+            if current_heading not in structured_notes['points']:
+                 structured_notes['points'][current_heading] = []
             if clean_sentence:
                 structured_notes['points'][current_heading].append(clean_sentence)
     
