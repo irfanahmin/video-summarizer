@@ -1,0 +1,30 @@
+# --- Core Framework ---
+fastapi
+uvicorn
+
+# --- NLP & Summarization ---
+nltk
+transformers
+sentencepiece
+scikit-learn
+
+# --- Audio & Video Processing ---
+moviepy
+yt-dlp
+pydub
+
+# --- Deep Learning / ML ---
+torch
+torchvision
+torchaudio
+
+# --- Data Handling ---
+numpy
+pandas
+
+# --- Transcription (if using Whisper or OpenAI) ---
+openai
+openai-whisper
+
+# --- Utilities ---
+pydantic
