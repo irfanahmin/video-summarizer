@@ -17,6 +17,8 @@ openai-whisper
 # Audio/Video Handling
 yt-dlp
 ffmpeg-python
+ffmpeg
 
 # Dependency of ML libraries (harmless to keep explicit)
 numpy
+
