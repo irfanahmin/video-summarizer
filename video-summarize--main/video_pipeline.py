@@ -158,10 +158,6 @@ def save_transcript(text: str, path: str = "transcript.txt"):
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
 
-def abstractive_summary(text: str) -> str:
-    """Return BART summary."""
-    # ⚠️ REPLACED: Placeholder for memory optimization.
-    return "Abstractive summary feature temporarily disabled due to memory constraints (BART model removed)."
 
 def extractive_summary(text: str, num_sentences: int = 20) -> str:
     """Return top-N sentences via LexRank."""
