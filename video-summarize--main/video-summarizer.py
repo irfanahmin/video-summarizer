@@ -1,30 +1,60 @@
-#video-summarizer.py
+# video-summarizer.py
 
 import os
-import whisper
-import ffmpeg
-import nltk
+# We move whisper and transformers imports below
+import ffmpeg # Relatively light
+import nltk # Relatively light
 from nltk.tokenize import sent_tokenize
-from transformers import pipeline
 
-# Optional extractive summarizer
+# Optional extractive summarizer (relatively light)
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
+
+# Global model caches
+WHISPER_MODEL = None
+SUMMARIZER_PIPELINE = None
+
 
 # Ensure punkt is available
 nltk.download("punkt", quiet=True)
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 
-VIDEO_PATH           = "video2.mp4"
-AUDIO_PATH           = "audio.wav"
-TRANSCRIPT_PATH      = "transcript.txt"
-SUMMARY_ABS_PATH     = "summary_abstractive.txt"
-SUMMARY_EXT_PATH     = "summary_extractive.txt"
+VIDEO_PATH           = "video2.mp4"
+AUDIO_PATH           = "audio.wav"
+TRANSCRIPT_PATH      = "transcript.txt"
+SUMMARY_ABS_PATH     = "summary_abstractive.txt"
+SUMMARY_EXT_PATH     = "summary_extractive.txt"
 
 # Use Hugging Face’s BART from the Hub for abstractive summarization
-ABSTRACTIVE_MODEL_ID = "facebook/bart-large-cnn"
+ABSTRACTIVE_MODEL_ID = "facebook/bart-base" # NOTE: Changed to 'bart-base' for better memory fit
+
+
+# --- Model Loading & Caching Functions (Lazy Loading) ---
+
+def get_whisper_model():
+    """Loads and caches the Whisper model on the first call."""
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None:
+        import whisper
+        print("--- LAZY LOADING: Loading Whisper model (tiny) ---")
+        WHISPER_MODEL = whisper.load_model("tiny", device="cpu")
+        print("--- LAZY LOADING: Whisper model loaded successfully ---")
+    return WHISPER_MODEL
+
+def get_summarizer_pipeline():
+    """Loads and caches the Hugging Face summarizer pipeline on the first call."""
+    global SUMMARIZER_PIPELINE
+    if SUMMARIZER_PIPELINE is None:
+        from transformers import pipeline
+        print(f"--- LAZY LOADING: Loading Summarizer pipeline ({ABSTRACTIVE_MODEL_ID}) ---")
+        SUMMARIZER_PIPELINE = pipeline("summarization", model=ABSTRACTIVE_MODEL_ID)
+        print("--- LAZY LOADING: Summarizer pipeline loaded successfully ---")
+    return SUMMARIZER_PIPELINE
+
+# --------------------------------------------------------------------------------
+
 
 # ─── STEP 1: AUDIO EXTRACTION ─────────────────────────────────────────────────
 
@@ -46,7 +76,7 @@ def transcribe_audio(audio_path: str) -> str|None:
     Returns the full stitched transcript from Whisper.
     """
     try:
-        model = whisper.load_model("tiny", device="cpu")
+        model = get_whisper_model() # <<< CRITICAL CHANGE: Use cached model
         result = model.transcribe(audio_path, fp16=False)
         # Stitch all segments to preserve everything
         full_text = " ".join(seg["text"].strip() for seg in result["segments"])
@@ -64,7 +94,7 @@ def save_transcript(text: str, path: str = TRANSCRIPT_PATH):
 # ─── STEP 3a: ABSTRACTIVE SUMMARY ──────────────────────────────────────────────
 
 def abstractive_summary(text: str, output_path: str = SUMMARY_ABS_PATH):
-    summarizer = pipeline("summarization", model=ABSTRACTIVE_MODEL_ID)
+    summarizer = get_summarizer_pipeline() # <<< CRITICAL CHANGE: Use cached pipeline
     # one big chunk (or chunk if you want)
     summary = summarizer(text, max_length=300, min_length=100, do_sample=False)[0]["summary_text"]
     with open(output_path, "w", encoding="utf-8") as f:
@@ -74,10 +104,10 @@ def abstractive_summary(text: str, output_path: str = SUMMARY_ABS_PATH):
 # ─── STEP 3b: EXTRACTIVE SUMMARY ──────────────────────────────────────────────
 
 def extractive_summary(text: str, num_sentences: int = 20, output_path: str = SUMMARY_EXT_PATH):
-    parser     = PlaintextParser.from_string(text, Tokenizer("english"))
+    parser     = PlaintextParser.from_string(text, Tokenizer("english"))
     summarizer = LexRankSummarizer()
-    summary    = summarizer(parser.document, num_sentences)
-    out_text   = " ".join(str(sent) for sent in summary)
+    summary    = summarizer(parser.document, num_sentences)
+    out_text   = " ".join(str(sent) for sent in summary)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(out_text)
     print(f"✅ Extractive summary ({num_sentences} sentences) saved: {output_path}")
