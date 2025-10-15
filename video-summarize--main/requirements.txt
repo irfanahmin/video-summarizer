@@ -1,34 +1,22 @@
-
-
-sentencepiece
-scikit-learn
-
-# --- Audio & Video Processing ---
-moviepy
-
-pydub
-
-
-torchvision
-torchaudio
-
-# --- Data Handling ---
-numpy
-pandas
-
-
-openai-whisper
-
-# --- Utilities ---
-pydantic
-python-multipart
+# Core Server & Utility
 fastapi
 uvicorn
-yt-dlp
-transformers
-torch
+pydantic
+python-multipart
+
+# NLP & Summarization
 nltk
 sumy
-ffmpeg-python
-whisper
 
+# ML Backend & Models (Heavy)
+torch
+torchaudio
+transformers
+openai-whisper
+
+# Audio/Video Handling
+yt-dlp
+ffmpeg-python
+
+# Dependency of ML libraries (harmless to keep explicit)
+numpy
