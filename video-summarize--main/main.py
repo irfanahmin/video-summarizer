@@ -18,9 +18,7 @@ from video_pipeline import (
     extract_audio,
     transcribe_audio,
     save_transcript,
-    abstractive_summary, # Still imported, but won't be called
     extractive_summary,
-    generate_structured_notes # Still imported, but won't be called
 )
 
 from yt_dlp import YoutubeDL
