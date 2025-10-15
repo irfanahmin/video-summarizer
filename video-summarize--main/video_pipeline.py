@@ -37,19 +37,19 @@ ABSTRACTIVE_MODEL_ID = "facebook/bart-base"
 # --- Model Loading & Caching Functions (Lazy Loading) ---
 
 def get_whisper_model():
-    """Loads and caches the Whisper model on the first call."""
+    """Loads and caches the Whisper model on first call."""
     global WHISPER_MODEL
     if WHISPER_MODEL is None:
         try:
-            # ⚠️ Import heavy library inside the function to prevent global startup load
             import whisper 
-            print("--- LAZY LOADING: Loading Whisper model (tiny) ---")
-            # Using CPU to keep memory footprint as low as possible
-            WHISPER_MODEL = whisper.load_model("tiny", device="cpu")
+            # --- CRITICAL CHANGE: Use the English-only version to save memory ---
+            print("--- LAZY LOADING: Loading Whisper model (tiny.en) ---") 
+            WHISPER_MODEL = whisper.load_model("tiny.en", device="cpu") # <-- CHANGED TO 'tiny.en'
             print("--- LAZY LOADING: Whisper model loaded successfully ---")
         except Exception as e:
             raise Exception(f"Failed to load Whisper model: {str(e)}")
     return WHISPER_MODEL
+
 
 def get_summarizer_pipeline():
     """Loads and caches the Hugging Face summarizer pipeline on the first call."""
